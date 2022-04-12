@@ -1,0 +1,52 @@
+.App {
+  text-align: center;
+}
+
+/* These styles are made bacause `ThemeProvider` does not override the styles
+of the "material-ui-chip-input" package. Creating a styled component with
+`styled` from "@mui/material/styles" doesn't work.
+  I have to use "*[class*='MuiChip-root']" because ".MuiChip-root" would
+not work. The class name is inconsistent: sometimes the class is named
+"MuiChip-root-70" and sometimes "MuiChip-root-60". */
+
+*[class*='MuiChip-root'] {
+  background-color: rgba(255, 255, 255, 0.16) !important;
+  margin: 3px !important;
+}
+
+*[class*='MuiPrivateNotchedOutline-root'] {
+  border-radius: 50px !important;
+  padding: 10px;
+  margin: 10px;
+}
+
+*[class*='MuiInputBase-root'] {
+  padding-top: 10px !important;
+  padding-bottom: 6px !important;
+}
+
+*[class*='MuiFormLabel-root'] {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+*[class*='MuiOutlinedInput-notchedOutline'] {
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+*[class*='MuiInputBase-input'] {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+*[class*='MuiChip-label'] {
+  color: #fff;
+}
+
+*[class*='MuiChip-deleteIcon'] {
+  color: rgba(255, 255, 255, 0.25) !important;
+}
+
+*[class*='MuiChip-deleteIcon']:hover {
+  color: rgb(150 150 150) !important;
+}
+
+/* END */
