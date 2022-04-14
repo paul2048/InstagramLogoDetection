@@ -14,7 +14,7 @@ const socket = io.connect('http://127.0.0.1:5000');
 export default function DetectLogosForm() {
   const [usernames, setUsernames] = React.useState([]);
   const [logos, setLogos] = React.useState([]);
-  // const [inputLogos, setInputLogos] = React.useState([]);
+  // const [selectedLogos, setSelectedLogos] = React.useState([]);
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [detectionItems, setDetectionItems] = React.useState([]);
@@ -29,8 +29,9 @@ export default function DetectLogosForm() {
     setUsernames(newAcccounts);
   }
 
-  const handleClick = () => {
+  const handleDetectLogosClick = () => {
     setLoading(!loading);
+    setDetectionItems([]);
     axios.post('http://127.0.0.1:5000/detect_logos', {logos, usernames})
       .then(() => {
         setLoading(false);
@@ -39,13 +40,6 @@ export default function DetectLogosForm() {
         console.error(error);
       });
   }
-
-  const getLogos = () => {
-    axios.get('http://127.0.0.1:5000/get_logos')
-      .catch((error) => {
-        console.error(error);
-      });
-  };
 
   socket.on('receive_detection_image', (detectionItem) => {
     setDetectionItems([...detectionItems, detectionItem]);
@@ -58,9 +52,14 @@ export default function DetectLogosForm() {
       return undefined;
     }
 
+    // If the select input is active, fill the select input with the possible logos
     (async () => {
       if (active) {
-        setLogos((await getLogos()).data.logos);
+        const possibleLogos = await axios.get('http://127.0.0.1:5000/get_logos')
+          .catch((error) => {
+            console.error(error);
+          });
+        setLogos((possibleLogos).data.logos);
       }
     })();
 
@@ -112,7 +111,7 @@ export default function DetectLogosForm() {
           <LoadingButton
             loading={loading}
             loadingPosition="start"
-            onClick={handleClick}
+            onClick={handleDetectLogosClick}
             startIcon={<PlayCircleFilledRoundedIcon />}
             variant="contained"
             size="large"

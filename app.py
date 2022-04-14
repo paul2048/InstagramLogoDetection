@@ -32,7 +32,7 @@ def detect_logos():
     }
 
     insta_scraper = instagram_scraper.InstagramScraper(**args)
-    insta_scraper.authenticate_as_guest()
+    # insta_scraper.authenticate_as_guest()
     # insta_scraper.authenticate_with_login()
 
     for username in usernames:
@@ -42,7 +42,7 @@ def detect_logos():
         except FileExistsError:
             pass
 
-        shared_data = insta_scraper.get_shared_data_userinfo(username=username)
+        # shared_data = insta_scraper.get_shared_data_userinfo(username=username)
         # for i, item in enumerate(insta_scraper.query_media_gen(shared_data)):
         for i in range(6):
             photo_path = os.path.join(user_dir, f'{i}.jpg')
@@ -58,7 +58,11 @@ def detect_logos():
             socketio.emit('receive_detection_image', {
                 'username': username,
                 'src': 'data:image/jpg;base64,' + text_photo,
-                'logos': ['AMD', 'Apple']
+                'logos': ['AMD', 'Apple'],
+                'originalSrc': None, # 'https://www.instagram.com/p/' + shared_data['shortcode']
+                'likes': 32, # shared_data['edge_media_to_comment']['count']
+                # Convert seconds to milliseconds because JavaScript uses milliseconds
+                'timestamp': 10000000 # shared_data['taken_at_timestamp'] * 1000
             })
     return 'good'
 
