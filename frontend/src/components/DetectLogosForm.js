@@ -1,6 +1,5 @@
 import React from 'react';
-import { FormGroup, Grid } from '@mui/material';
-import { Autocomplete, Chip, TextField } from '@mui/material';
+import { FormGroup, Grid, Autocomplete, Chip, TextField } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import PlayCircleFilledRoundedIcon from '@mui/icons-material/PlayCircleFilledRounded';
 import ChipInput from 'material-ui-chip-input'
@@ -14,7 +13,7 @@ const socket = io.connect('http://127.0.0.1:5000');
 export default function DetectLogosForm() {
   const [usernames, setUsernames] = React.useState([]);
   const [logos, setLogos] = React.useState([]);
-  // const [selectedLogos, setSelectedLogos] = React.useState([]);
+  const [selectedLogos, setSelectedLogos] = React.useState([]);
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [detectionItems, setDetectionItems] = React.useState([]);
@@ -32,7 +31,7 @@ export default function DetectLogosForm() {
   const handleDetectLogosClick = () => {
     setLoading(!loading);
     setDetectionItems([]);
-    axios.post('http://127.0.0.1:5000/detect_logos', {logos, usernames})
+    axios.post('http://127.0.0.1:5000/detect_logos', {selectedLogos, usernames})
       .then(() => {
         setLoading(false);
       })
@@ -88,8 +87,12 @@ export default function DetectLogosForm() {
             multiple
             fullWidth
             open={open}
+            limitTags={64}
             onOpen={() => {
               setOpen(true);
+            }}
+            onChange={(_, val) => {
+              setSelectedLogos(val);
             }}
             onClose={() => {
               setOpen(false);

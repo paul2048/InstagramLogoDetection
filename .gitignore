@@ -1,10 +1,13 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
 # back-end
 __pycache__
 env
 photos/*
+logo_detection_model
+tf_object_detection
+protoc
 instagram-scraper.log
-
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
 frontend/node_modules

@@ -49,7 +49,7 @@ export default function DetectionGallery(props) {
                 <ImageListItem key={i}>
                   <img src={src} alt={'photo ' + i} loading="lazy" style={imgStyle} />
                   <ImageListItemBar
-                    title={'Original post: ' + originalSrc}
+                    title={<a href={originalSrc} rel="noreferrer" target="_blank">Original post</a>}
                     subtitle={
                       <div>
                         <p>Logos: {logos.join(', ')}</p>
