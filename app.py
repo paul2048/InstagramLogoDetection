@@ -83,7 +83,7 @@ def detect_and_save(img_path):
 
     input_tensor = tf.convert_to_tensor(np.expand_dims(image_np, 0), dtype=tf.float32)
     detections = detect_fn(input_tensor)
-    min_score_thresh = 0.2
+    min_score_thresh = 0.4
 
     if tf.reduce_max(detections['detection_scores']) > min_score_thresh:
         num_detections = int(detections.pop('num_detections'))
@@ -128,16 +128,14 @@ def serve_logos():
 def detect_logos():
     usernames = request.json['usernames']
     logos = request.json['selectedLogos']
-    usernames = ['everythingapplepro'] ########
     args = {
-        'media_types': 'image',
+        'media_types': ['image'],
         'maximum': 9999,
-        'cookiejar': 'cookies'
     }
 
     insta_scraper = instagram_scraper.InstagramScraper(**args)
     # insta_scraper.authenticate_as_guest()
-    insta_scraper.authenticate_with_login()
+    # insta_scraper.authenticate_with_login()
 
     for username in usernames:
         user_dir = os.path.join(paths['PHOTOS'], username)
@@ -146,16 +144,19 @@ def detect_logos():
         except FileExistsError:
             pass
 
-        shared_data = insta_scraper.get_shared_data_userinfo(username=username)
-        # pprint(shared_data)
+        # shared_data = insta_scraper.get_shared_data_userinfo(username=username)
+        # # Generator that includes the data of each instagram post of the current user
+        # user_images_data_len = shared_data['edge_owner_to_timeline_media']['count']
+        # print(user_images_data_len)
 
-        for i, item in enumerate(insta_scraper.query_media_gen(shared_data)):
-        # for i in range(6):
+        # for i, item in enumerate(insta_scraper.query_media_gen(shared_data)):
+        for i in range(40):
+            print(i)
             photo_path = os.path.join(user_dir, f'{i}.jpg')
-            try:
-                urllib.request.urlretrieve(item['display_url'], photo_path)
-            except urllib.error.URLError:
-                print('Unreachable: ' + item['display_url'])
+            # try:
+            #     urllib.request.urlretrieve(item['display_url'], photo_path)
+            # except urllib.error.URLError:
+            #     print('Unreachable: ' + item['display_url'])
 
             det_img = detect_and_save(photo_path)
             if det_img is not None:
@@ -169,16 +170,23 @@ def detect_logos():
                     'username': username,
                     'src': 'data:image/jpg;base64,' + text_photo,
                     'logos': logos,
-                    # 'originalSrc': None,
-                    'originalSrc': 'https://www.instagram.com/p/' + item['shortcode'],
-                    # 'likes': 32,
-                    'likes': item['edge_media_preview_like']['count'],
+                    'originalSrc': None,
+                    # 'originalSrc': 'https://www.instagram.com/p/' + item['shortcode'],
+                    'likes': 32,
+                    # 'likes': item['edge_media_preview_like']['count'],
                     # Convert seconds to milliseconds because JavaScript uses milliseconds
-                    # 'timestamp': 10000000,
-                    'timestamp': item['taken_at_timestamp'] * 1000,
+                    'timestamp': 10000000,
+                    # 'timestamp': item['taken_at_timestamp'] * 1000,
                 })
             else:
                 print(f'No logo in {photo_path}')
+
+            # Emit the progress percentage
+            socketio.emit(f'send_progress_{username}', {
+                # 'progress': ((i+1) / user_images_data_len) * 100,
+                'progress': f'{(((i+1) / 40) * 100):.2f}',
+            })
+        print(f'{username} done.')
     return 'good'
 
 if __name__ == '__main__':

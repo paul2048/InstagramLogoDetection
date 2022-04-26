@@ -49,4 +49,8 @@ not work. The class name is inconsistent: sometimes the class is named
   color: rgb(150 150 150) !important;
 }
 
+*[class*='WAMuiChipInput-disabled'] {
+  opacity: 0.38;
+}
+
 /* END */
