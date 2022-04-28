@@ -71,7 +71,7 @@ export default function DetectionGallery({ detectionItems }) {
                     </Grow>
                   ))}
                 </ImageList>
-                <LoadingBar username={username} />
+                <LoadingBar username={username} detectionItems={detectionItems} />
               </AccordionDetails>
             </Accordion>
           ))}
