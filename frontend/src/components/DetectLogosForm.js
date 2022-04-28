@@ -11,7 +11,7 @@ import DetectionGallery from './DetectionGallery';
 const socket = io.connect('http://127.0.0.1:5000');
 
 export default function DetectLogosForm() {
-  const [usernames, setUsernames] = React.useState(['mkbhd', 'everythingapplepro']);
+  const [usernames, setUsernames] = React.useState([]);
   const [logos, setLogos] = React.useState([]);
   const [selectedLogos, setSelectedLogos] = React.useState(['Apple', 'Asus']);
   const [open, setOpen] = React.useState(false);
@@ -19,16 +19,14 @@ export default function DetectLogosForm() {
   const [detectionItems, setDetectionItems] = React.useState({});
   const loadingSelectableLogos = (open && logos.length === 0);
 
-  const handleAddUsername = (account) => {
-    setUsernames([...usernames, account]);
-    setDetectionItems(Object.fromEntries(usernames.map((key) => [key, []])))
+  // When we add a new username in the usernames' input text 
+  const handleAddUsername = (username) => {
+    setUsernames([...usernames, username]);
   }
 
-  const handleRemoveUsername = (account, index) => {
-    // Filter out the i-th account (the account of the clicked 'X')
-    const newAcccounts = usernames.filter((_, i) => (i !== index));
-    setUsernames(newAcccounts);
-    setDetectionItems(Object.fromEntries(usernames.map((key) => [key, []])))
+  // When we click on a username's "x"
+  const handleRemoveUsername = (username, index) => {
+    setUsernames(usernames.filter((_, i) => (i !== index)));
   }
 
   const handleDetectLogosClick = () => {
@@ -52,7 +50,7 @@ export default function DetectLogosForm() {
     // Append the detection item to the corresponding instagram username key
     setDetectionItems({
       ...detectionItems,
-      [username]: userArr
+      [username]: userArr,
     });
   });
 
@@ -77,14 +75,24 @@ export default function DetectLogosForm() {
     return () => (active = false);
   }, [loadingSelectableLogos]);
 
+  // When the `usernames` state gets updated
   React.useEffect(() => {
-    // Each username will map to an empty array of detections
-    setDetectionItems(Object.fromEntries(usernames.map((key) => [key, []])));
+    setDetectionItems(
+      Object.fromEntries(usernames.map((key) => {
+        // When a username was removed
+        if (key in detectionItems) {
+          return [key, detectionItems[key]]
+        }
+        // When a username was added
+        return [key, []]
+      }))
+    )
   }, [usernames]);
 
   return (
     <FormGroup>
       <Grid container spacing={4}>
+        {/* The usernames' text input */}
         <Grid item xs={12} md={6}>
           <ChipInput
             value={usernames}
@@ -100,6 +108,7 @@ export default function DetectLogosForm() {
           />
         </Grid>
 
+        {/* The logos' text input */}
         <Grid item xs={12} md={6}>
           <Autocomplete
             value={selectedLogos}
