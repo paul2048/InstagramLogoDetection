@@ -5,6 +5,11 @@ import io from 'socket.io-client';
 
 const socket = io.connect('http://127.0.0.1:5000');
 
+const loadingBarStyle = {
+  borderRadius: 40,
+  height: 16,
+}
+
 export default function LoadingBar({ username, detectionItems }) {
   const [progress, setProgress] = React.useState('0.00');
 
@@ -25,7 +30,7 @@ export default function LoadingBar({ username, detectionItems }) {
     <Grid item xs={12}>
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
         <Box sx={{ width: '100%', mr: 1 }}>
-          <LinearProgress variant="determinate" value={+progress} />
+          <LinearProgress variant="determinate" value={+progress} style={loadingBarStyle} />
         </Box>
         <Box sx={{ minWidth: 35 }}>
           <Typography variant="body2" color="text.secondary">{progress}%</Typography>

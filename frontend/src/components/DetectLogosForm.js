@@ -30,15 +30,30 @@ export default function DetectLogosForm() {
   }
 
   const handleDetectLogosClick = () => {
-    setLoading(!loading);
-    // Send the selected usernames and logos, so the logo detection process starts
-    axios.post('http://127.0.0.1:5000/detect_logos', {usernames, selectedLogos})
-      .then(() => {
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+    let startDetaction = true;
+    const usernamesWithDetections = usernames.reduce((acc, username) => {
+      if (detectionItems[username].length > 0) {
+        return [...acc, username];
+      }
+      return acc
+    }, []);
+
+    if (usernamesWithDetections.length > 0) {
+      const confirmMsg = 'Are you sure you want to start a new detection process? The detections from the following accounts will be removed: \n';
+      startDetaction = window.confirm(confirmMsg + usernamesWithDetections.join(',\n'));
+    }
+
+    if (startDetaction === true) {
+      setLoading(!loading);
+      // Send the selected usernames and logos, so the logo detection process starts
+      axios.post('http://127.0.0.1:5000/detect_logos', {usernames, selectedLogos})
+        .then(() => {
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    }
   }
 
   socket.on('receive_detection_image', (detectionItem) => {
@@ -136,6 +151,7 @@ export default function DetectLogosForm() {
         <Grid item xs={12}>
           <LoadingButton
             loading={loading}
+            disabled={usernames.length === 0 || selectedLogos.length === 0}
             loadingPosition="start"
             onClick={handleDetectLogosClick}
             startIcon={<PlayCircleFilledRoundedIcon />}
