@@ -26,7 +26,15 @@ export default function DetectLogosForm() {
 
   // When we click on a username's "x"
   const handleRemoveUsername = (username, index) => {
-    setUsernames(usernames.filter((_, i) => (i !== index)));
+    let removeConfirmation = true;
+    if (detectionItems[username].length > 0) {
+      const confirmMsg = `Are you sure you want to remove the username? The detections from ${username} will be removed.`;
+      removeConfirmation = window.confirm(confirmMsg);
+    }
+
+    if (removeConfirmation === true) {
+      setUsernames(usernames.filter((_, i) => (i !== index)));
+    }
   }
 
   const handleDetectLogosClick = () => {
