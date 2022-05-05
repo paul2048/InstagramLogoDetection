@@ -3,8 +3,11 @@
 # back-end
 __pycache__
 env
+annotations/*
+!annotations/generate_tfrecord.py
 photos/*
-logo_detection_model
+dataset/*
+models/*
 tf_object_detection
 protoc
 instagram-scraper.log

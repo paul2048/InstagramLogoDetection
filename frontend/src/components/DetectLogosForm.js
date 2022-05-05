@@ -13,7 +13,7 @@ const socket = io.connect('http://127.0.0.1:5000');
 export default function DetectLogosForm() {
   const [usernames, setUsernames] = React.useState([]);
   const [logos, setLogos] = React.useState([]);
-  const [selectedLogos, setSelectedLogos] = React.useState(['Apple', 'Asus']);
+  const [selectedLogos, setSelectedLogos] = React.useState(['Apple', 'ASUS']);
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [detectionItems, setDetectionItems] = React.useState({});
