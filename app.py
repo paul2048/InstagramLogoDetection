@@ -14,7 +14,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_socketio import SocketIO
 from annotations.generate_tfrecord import generate_tfrecord
-from workspace_paths import paths
+from workspace_paths import paths, INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD
 from downloads_and_installs import downloads_and_installs
 
 # Downloads necessary resources:
@@ -39,25 +39,6 @@ if os.path.isfile('model_main_tf2.py'):
     shutil.copyfile(
         'model_main_tf2.py',
         os.path.join(paths['OBJECT_DETECTION'], 'model_main_tf2.py'))
-
-# Update the config file of the pretrained model
-config = config_util.get_configs_from_pipeline_file(paths['PIPELINE_CONFIG'])
-pipeline_config = pipeline_pb2.TrainEvalPipelineConfig()
-with tf.io.gfile.GFile(paths['PIPELINE_CONFIG'], 'r') as f:
-    proto_str = f.read()
-    text_format.Merge(proto_str, pipeline_config)
-
-pipeline_config.train_config.batch_size = 16
-pipeline_config.train_config.fine_tune_checkpoint_type = 'detection'
-pipeline_config.train_config.fine_tune_checkpoint = os.path.join(paths['PRETRAINED_MODEL_CKPT'], 'ckpt-0')
-pipeline_config.train_input_reader.label_map_path = paths['LABEL_MAP']
-pipeline_config.train_input_reader.tf_record_input_reader.input_path[:] = [os.path.join(paths['ANNOTATIONS'], 'train.record')]
-pipeline_config.eval_input_reader[0].label_map_path = paths['LABEL_MAP']
-pipeline_config.eval_input_reader[0].tf_record_input_reader.input_path[:] = [os.path.join(paths['ANNOTATIONS'], 'test.record')]
-
-config_text = text_format.MessageToString(pipeline_config)
-with tf.io.gfile.GFile(paths['PIPELINE_CONFIG'], 'wb') as f:
-    f.write(config_text)
 
 # The unique logo names from the dataset
 LOGOS = sorted([
@@ -88,84 +69,128 @@ def detect_logos():
         shutil.rmtree(paths['LOGODET_3K_FLAT_SUBSET'])
     os.mkdir(paths['LOGODET_3K_FLAT_SUBSET'])
 
-    # Create the label map
-    print('Creating the label map...')
-    label_map = '\n'.join([
-        f'item {{\n    id: {i+1}\n    name: "{brand_name}"\n}}'
-        for i, brand_name in enumerate(selected_logos)
-    ])
-    # Write the label map into a file
-    with open(paths['LABEL_MAP'], 'w+') as f:
-        f.write(label_map)
+    # Keep only the alphanumericals of each logo name and concatenate the strings.
+    # We append the length of the resulted string at the end of the string.
+    # We append to distinguish when two selected logos lists are like: ["Apps"] and ["App's"].
+    # The former will become "Apps4" and the latter will become "Apps5".  
+    # This will be the name of the model's directory.
+    model_dir_name = ''.join(filter(str.isalnum, ''.join(sorted(selected_logos))))
+    model_dir_name += str(len(model_dir_name))
+    model_dir = os.path.join(paths['TRAINED_MODELS'], model_dir_name)
+    label_map_path = os.path.join(model_dir, 'label_map.pbtxt')
+    # Use the second checkpoint, which is the latest because only one additional
+    # checkpoint will be created for each model
+    ckpt_num = 2
 
-    # Update the config file to have the correct number of classes
-    pipeline_config.model.center_net.num_classes = len(selected_logos)
-    config_text = text_format.MessageToString(pipeline_config)
-    with tf.io.gfile.GFile(paths['PIPELINE_CONFIG'], 'wb') as f:
-        f.write(config_text)
+    if not os.path.isfile(os.path.join(model_dir, f'ckpt-{ckpt_num}.index')):
+        try:
+            os.mkdir(model_dir)
+        except FileExistsError:
+            pass
 
+        # Create the label map
+        print('Creating the label map...')
+        label_map = '\n'.join([
+            f'item {{\n    id: {i+1}\n    name: "{brand_name}"\n}}'
+            for i, brand_name in enumerate(selected_logos)
+        ])
+
+        # Write the label map into a file
+        with open(label_map_path, 'w+') as f:
+            f.write(label_map)
+
+        # Copy the pipeline templete (the config of the pretrained model) to the new model's directory
+        pipeline_template_path = os.path.join(paths['PRETRAINED_MODEL'], 'pipeline.config')
+        pipeline_path = os.path.join(model_dir, 'pipeline.config')
+        shutil.copy(pipeline_template_path, pipeline_path)
+
+        tfrecord_train_path = os.path.join(paths['ANNOTATIONS'], 'train.record')
+        tfrecord_test_path = os.path.join(paths['ANNOTATIONS'], 'test.record')
+
+        # Update the config file of the pretrained model
+        config = config_util.get_configs_from_pipeline_file(pipeline_path)
+        pipeline_config = pipeline_pb2.TrainEvalPipelineConfig()
+        with tf.io.gfile.GFile(pipeline_path, 'r') as f:
+            proto_str = f.read()
+            text_format.Merge(proto_str, pipeline_config)
+        pipeline_config.model.center_net.num_classes = len(selected_logos)
+        pipeline_config.train_config.batch_size = 1
+        pipeline_config.train_config.fine_tune_checkpoint_type = 'detection'
+        pipeline_config.train_config.fine_tune_checkpoint = os.path.join(paths['PRETRAINED_MODEL_CKPT'], 'ckpt-0')
+        pipeline_config.train_input_reader.label_map_path = label_map_path
+        pipeline_config.train_input_reader.tf_record_input_reader.input_path[:] = [tfrecord_train_path]
+        pipeline_config.eval_input_reader[0].label_map_path = label_map_path
+        pipeline_config.eval_input_reader[0].tf_record_input_reader.input_path[:] = [tfrecord_test_path]
+        config_text = text_format.MessageToString(pipeline_config)
+        with tf.io.gfile.GFile(pipeline_path, 'wb') as f:
+            f.write(config_text)
+
+        # Delete the test and train sets of the previous model
+        trainset_path = os.path.join(paths['DATASET'], 'train')
+        testset_path = os.path.join(paths['DATASET'], 'test')
+        if os.path.isdir(trainset_path):
+            shutil.rmtree(trainset_path)
+        if os.path.isdir(testset_path):
+            shutil.rmtree(testset_path)
+
+        # Flatten the data (using only the logos selected by the user).
+        # Loop over the LogoDet-3K brands catagories (Food, Technology, etc.)
+        print('Copying the images of the selected logos...')
+        for category in os.listdir(paths['LOGODET_3K']):
+            brands_path = os.path.join(paths['LOGODET_3K'], category)
+            # Loop over the brands (7-Up, Apple, etc.)
+            for brand in os.listdir(brands_path):
+                if brand in selected_logos:
+                    brand_path = os.path.join(brands_path, brand)
+                    # Loop over each file (1.jpg, 1.xml, etc.)
+                    for file_ in os.listdir(brand_path):
+                        source_path = os.path.join(brand_path, file_)
+                        # Append the name of the brand at the beginning of the file name
+                        # because "1.jpg" (for example) repeats at each brand
+                        if file_.endswith('.xml'):
+                            with open(source_path) as f:
+                                tree = ET.parse(f)
+                                root = tree.getroot()
+                                xml_filename = root.find('filename')
+                                num, extenssion = xml_filename.text.split('.')
+                                num = num.split('_')[-1]
+                                xml_filename.text = f'{brand}_{num}.{extenssion}'
+                            tree.write(source_path)
+                        destination_path = os.path.join(paths['LOGODET_3K_FLAT_SUBSET'], f'{brand}_{file_}')
+                        shutil.copy(source_path, destination_path)
+
+        # Split the flat dataset into training and testing sets
+        print('Splitting the data into train and test sets...')
+        annotated_images.split(
+            paths['LOGODET_3K_FLAT_SUBSET'],
+            output_dir=paths['DATASET'],
+            ratio=(0.7, 0.3))
+
+        # Generate tfrecord files using the train and test sets
+        generate_tfrecord(trainset_path, label_map_path, tfrecord_train_path)
+        generate_tfrecord(testset_path, label_map_path, tfrecord_test_path)
+
+        # Train the model
+        print('Training the model...')
+        train_steps = 1000
+        model_main_tf2(
+            pipeline_config_path=pipeline_path,
+            model_dir=paths['PRETRAINED_MODEL'],
+            checkpoint_every_n=train_steps, # We need only 1 checkpoint
+            num_train_steps=train_steps)
+
+        # Move the checkpoint of the trained mode into the model's directory
+        shutil.move(os.path.join(paths['PRETRAINED_MODEL'], f'ckpt-{ckpt_num}.data-00000-of-00001'), model_dir)
+        shutil.move(os.path.join(paths['PRETRAINED_MODEL'], f'ckpt-{ckpt_num}.index'), model_dir)
+
+    pipeline_path = os.path.join(model_dir, 'pipeline.config')
+    config = config_util.get_configs_from_pipeline_file(pipeline_path)
     # Build the detection model
     detection_model = model_builder.build(model_config=config['model'], is_training=False)
 
-    TRAINSET_PATH = os.path.join(paths['DATASET'], 'train')
-    TESTSET_PATH = os.path.join(paths['DATASET'], 'test')
-    if os.path.isdir(TRAINSET_PATH):
-        shutil.rmtree(TRAINSET_PATH)
-    if os.path.isdir(TESTSET_PATH):
-        shutil.rmtree(TESTSET_PATH)
-    # Flatten the data (using only the logos selected by the user).
-    # Loop over the LogoDet-3K brands catagories (Food, Technology, etc.)
-    print('Copying the images of the selected logos...')
-    for category in os.listdir(paths['LOGODET_3K']):
-        brands_path = os.path.join(paths['LOGODET_3K'], category)
-        # Loop over the brands (7-Up, Apple, etc.)
-        for brand in os.listdir(brands_path):
-            if brand in selected_logos:
-                brand_path = os.path.join(brands_path, brand)
-                # Loop over each file (1.jpg, 1.xml, etc.)
-                for file_ in os.listdir(brand_path):
-                    source_path = os.path.join(brand_path, file_)
-                    # Append the name of the brand at the beginning of the file name
-                    # because "1.jpg" (for example) repeats at each brand
-                    if file_.endswith('.xml'):
-                        with open(source_path) as f:
-                            tree = ET.parse(f)
-                            root = tree.getroot()
-                            xml_filename = root.find('filename')
-                            num, extenssion = xml_filename.text.split('.')
-                            num = num.split('_')[-1]
-                            xml_filename.text = f'{brand}_{num}.{extenssion}'
-                        tree.write(source_path)
-                    destination_path = os.path.join(paths['LOGODET_3K_FLAT_SUBSET'], f'{brand}_{file_}')
-                    shutil.copy(source_path, destination_path)
-
-    # Split the flat dataset into training and testing sets
-    print('Splitting the data into train and test sets...')
-    annotated_images.split(
-        paths['LOGODET_3K_FLAT_SUBSET'],
-        output_dir=paths['DATASET'],
-        seed=42, ratio=(0.7, 0.3))
-
-    # Generate tfrecord files using the train and test sets
-    generate_tfrecord(
-        os.path.join(paths['DATASET'], 'train'),
-        paths['LABEL_MAP'],
-        os.path.join(paths['ANNOTATIONS'], 'train.record'))
-    generate_tfrecord(
-        os.path.join(paths['DATASET'], 'test'),
-        paths['LABEL_MAP'],
-        os.path.join(paths['ANNOTATIONS'], 'test.record'))
-
-    # Train the model
-    print('Training the model...')
-    model_main_tf2(
-        pipeline_config_path=paths['PIPELINE_CONFIG'],
-        model_dir=paths['PRETRAINED_MODEL'],
-        num_train_steps=2000)
-
     # Restore checkpoint
     ckpt = tf.compat.v2.train.Checkpoint(model=detection_model)
-    ckpt.restore(os.path.join(paths['PRETRAINED_MODEL'], 'ckpt-4')).expect_partial()
+    ckpt.restore(os.path.join(model_dir, f'ckpt-{ckpt_num}')).expect_partial()
 
     @tf.function
     def detect_fn(image):
@@ -181,7 +206,7 @@ def detect_logos():
         Returns `None` is no logo was detected.
         """
 
-        category_index = label_map_util.create_category_index_from_labelmap(paths['LABEL_MAP'])
+        category_index = label_map_util.create_category_index_from_labelmap(label_map_path)
         img = cv2.imread(img_path)
         image_np = np.array(img)
 
@@ -212,16 +237,15 @@ def detect_logos():
             return image_np_with_detections
         return None
 
-    args = {
+    scraper_args = {
         'media_types': ['image'],
         'maximum': 9999,
-        'login_user': None, #####
-        'login_pass': None  #####
+        'login_user': INSTAGRAM_USERNAME,
+        'login_pass': INSTAGRAM_PASSWORD,
     }
 
-    insta_scraper = instagram_scraper.InstagramScraper(**args)
-    insta_scraper.authenticate_as_guest()
-    # insta_scraper.authenticate_with_login()
+    insta_scraper = instagram_scraper.InstagramScraper(**scraper_args)
+    insta_scraper.authenticate_with_login()
 
     for username in usernames:
         user_dir = os.path.join(paths['PHOTOS'], username)
@@ -235,7 +259,6 @@ def detect_logos():
         user_images_data_len = shared_data['edge_owner_to_timeline_media']['count']
 
         for i, item in enumerate(insta_scraper.query_media_gen(shared_data)):
-        # for i in range(40):
             print(i)
             photo_path = os.path.join(user_dir, f'{i}.jpg')
             try:
@@ -255,19 +278,15 @@ def detect_logos():
                     'username': username,
                     'src': 'data:image/jpg;base64,' + text_photo,
                     'logos': selected_logos,
-                    # 'originalSrc': None,
-                    'originalSrc': 'https://www.instagram.com/p/' + item['shortcode'],
-                    # 'likes': 32,
-                    'likes': item['edge_media_preview_like']['count'],
                     # Convert seconds to milliseconds because JavaScript uses milliseconds
-                    # 'timestamp': 10000000,
                     'timestamp': item['taken_at_timestamp'] * 1000,
+                    'originalSrc': 'https://www.instagram.com/p/' + item['shortcode'],
+                    'likes': item['edge_media_preview_like']['count'],
                 })
 
             # Emit the progress percentage
             socketio.emit(f'send_progress_{username}', {
-                'progress': ((i+1) / user_images_data_len) * 100,
-                # 'progress': f'{(((i+1) / 40) * 100):.2f}',
+                'progress': f'{(((i+1) / user_images_data_len) * 100):.2f}',
             })
         print(f'{username} done.')
     return 'good'

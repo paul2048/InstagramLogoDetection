@@ -61,8 +61,8 @@ def downloads_and_installs():
 
         # Download and unzip protobuf
         PROTOC_URL = 'https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protoc-3.20.0-win64.zip'
+        protoc_zip = os.path.join(paths['PROTOC'], 'protoc.zip')
         try:
-            protoc_zip = os.path.join(paths['PROTOC'], 'protoc.zip')
             print(f'Downloading protobuf...')
             urllib.request.urlretrieve(PROTOC_URL, protoc_zip)
             print('Download complete.')
@@ -84,8 +84,8 @@ def downloads_and_installs():
     # Download the pretrained model
     if not os.path.exists(os.path.join(paths['PRETRAINED_MODEL_CKPT'])):
         PRETRAINED_MODEL_URL = f'http://download.tensorflow.org/models/object_detection/tf2/20200711/{PRETRAINED_MODEL_NAME}.tar.gz'
+        model_tar = os.path.join(paths['MODELS'], 'model.tar.gz')
         try:
-            model_tar = os.path.join(paths['MODELS'], 'model.tar.gz')
             print(f'Downloading pretrained {PRETRAINED_MODEL_NAME}...')
             urllib.request.urlretrieve(PRETRAINED_MODEL_URL, model_tar)
             print('Download complete.')
@@ -96,7 +96,11 @@ def downloads_and_installs():
         # Rename the extracted folder of the pretrained model
         old_dir_name = os.path.join(paths['MODELS'], PRETRAINED_MODEL_NAME)
         new_dir_name = paths['PRETRAINED_MODEL']
-        os.rename(old_dir_name, new_dir_name)
+        try:
+            os.rmdir(paths['PRETRAINED_MODEL'])
+        except FileNotFoundError:
+            pass
+        shutil.move(old_dir_name, new_dir_name)
         # Remove the downloaded archive
         os.remove(model_tar)
         # Rename the "checkpoint" directory (https://stackoverflow.com/a/64159833/7367049)
