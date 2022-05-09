@@ -159,6 +159,15 @@ def detect_logos():
                         destination_path = os.path.join(paths['LOGODET_3K_FLAT_SUBSET'], f'{brand}_{file_}')
                         shutil.copy(source_path, destination_path)
 
+        # Copy extra labeled data (if any) to the flat subset
+        for logo in selected_logos:
+            extra_logo_data_path = os.path.join(paths['EXTRA_DATA'], logo)
+            if os.path.isdir(extra_logo_data_path):
+                for file_ in os.listdir(extra_logo_data_path):
+                    shutil.copy(
+                        os.path.join(extra_logo_data_path, file_),
+                        os.path.join(paths['LOGODET_3K_FLAT_SUBSET'], file_))
+
         # Split the flat dataset into training and testing sets
         print('Splitting the data into train and test sets...')
         annotated_images.split(
@@ -172,7 +181,7 @@ def detect_logos():
 
         # Train the model
         print('Training the model...')
-        train_steps = 1000
+        train_steps = 2000
         model_main_tf2(
             pipeline_config_path=pipeline_path,
             model_dir=paths['PRETRAINED_MODEL'],

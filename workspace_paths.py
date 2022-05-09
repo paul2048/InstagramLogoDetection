@@ -1,12 +1,14 @@
 import os
 
+# Type your instagram login data here
 INSTAGRAM_USERNAME = None
 INSTAGRAM_PASSWORD = None
 
 TFOD_DIR_NAME = 'tf_object_detection'
-PRETRAINED_MODEL_NAME = 'centernet_resnet101_v1_fpn_512x512_coco17_tpu-8'
+PRETRAINED_MODEL_NAME = 'centernet_resnet50_v1_fpn_512x512_coco17_tpu-8'
 paths = {
     'DATASET': 'dataset',
+    'EXTRA_DATA': 'extra_data',
     'ANNOTATED_IMAGES_PACKAGE': os.path.join('dataset', 'annotated-images'),
     'ANNOTATIONS': 'annotations',
     'LOGODET_3K': os.path.join('dataset', 'LogoDet-3K'),
