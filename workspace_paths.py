@@ -4,8 +4,18 @@ import os
 INSTAGRAM_USERNAME = None
 INSTAGRAM_PASSWORD = None
 
+# The score (between 0 and 1) of the detection
+MIN_DETECTION_SCORE = 0.6
+# Number of examples in a minibatch
+BATCH_SIZE = 1
+# The number of times to pass through each minibatch
+TRAIN_STEPS = 5000
+# The number of maximum images to check for each Instagram account
+MAX_IMGS_PER_USER = 1000
+
 TFOD_DIR_NAME = 'tf_object_detection'
 PRETRAINED_MODEL_NAME = 'centernet_resnet50_v1_fpn_512x512_coco17_tpu-8'
+
 paths = {
     'DATASET': 'dataset',
     'EXTRA_DATA': 'extra_data',

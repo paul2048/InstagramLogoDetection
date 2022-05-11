@@ -52,15 +52,19 @@ export default function DetectionGallery({ detectionItems }) {
               </AccordionSummary>
               <AccordionDetails>
                 <ImageList cols={cols} gap={12}>
-                  {detectionItems[username].map(({src, logos, originalSrc, likes, timestamp}, j) => (
+                  {detectionItems[username].map(({src, originalSrc, likes, timestamp}, j) => (
                     <Grow key={j} in={true}>
                       <ImageListItem>
                         <img src={src} alt={'photo ' + j} loading="lazy" style={imgStyle} />
                         <ImageListItemBar
-                          title={<a href={originalSrc} rel="noreferrer" target="_blank">Original post</a>}
+                          title={<a
+                            href={originalSrc}
+                            rel="noreferrer"
+                            target="_blank"
+                            style={{'color': '#7fffd4'}}>
+                              Original post</a>}
                           subtitle={
                             <div>
-                              <p>Logos: {logos.join(', ')}</p>
                               <p>Likes: {likes}</p>
                               <p>Post date: {new Date(timestamp).toLocaleDateString()}</p>
                             </div>

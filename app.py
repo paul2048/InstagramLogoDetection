@@ -15,6 +15,7 @@ from flask_cors import CORS
 from flask_socketio import SocketIO
 from annotations.generate_tfrecord import generate_tfrecord
 from workspace_paths import paths, INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD
+from workspace_paths import BATCH_SIZE, TRAIN_STEPS, MIN_DETECTION_SCORE, MAX_IMGS_PER_USER
 from downloads_and_installs import downloads_and_installs
 
 # Downloads necessary resources:
@@ -47,6 +48,15 @@ LOGOS = sorted([
     for brand in os.listdir(os.path.join(paths['LOGODET_3K'], category))
 ])
 
+# Initialize the scraping object and log into your Instagram account
+scraper_args = {
+    'media_types': ['image'],
+    'maximum': 9999,
+    'login_user': INSTAGRAM_USERNAME,
+    'login_pass': INSTAGRAM_PASSWORD,
+}
+insta_scraper = instagram_scraper.InstagramScraper(**scraper_args)
+insta_scraper.authenticate_with_login()
 
 
 # Create Flask application
@@ -114,7 +124,7 @@ def detect_logos():
             proto_str = f.read()
             text_format.Merge(proto_str, pipeline_config)
         pipeline_config.model.center_net.num_classes = len(selected_logos)
-        pipeline_config.train_config.batch_size = 1
+        pipeline_config.train_config.batch_size = BATCH_SIZE
         pipeline_config.train_config.fine_tune_checkpoint_type = 'detection'
         pipeline_config.train_config.fine_tune_checkpoint = os.path.join(paths['PRETRAINED_MODEL_CKPT'], 'ckpt-0')
         pipeline_config.train_input_reader.label_map_path = label_map_path
@@ -181,12 +191,11 @@ def detect_logos():
 
         # Train the model
         print('Training the model...')
-        train_steps = 2000
         model_main_tf2(
             pipeline_config_path=pipeline_path,
             model_dir=paths['PRETRAINED_MODEL'],
-            checkpoint_every_n=train_steps, # We need only 1 checkpoint
-            num_train_steps=train_steps)
+            checkpoint_every_n=TRAIN_STEPS, # We need only 1 checkpoint
+            num_train_steps=TRAIN_STEPS)
 
         # Move the checkpoint of the trained mode into the model's directory
         shutil.move(os.path.join(paths['PRETRAINED_MODEL'], f'ckpt-{ckpt_num}.data-00000-of-00001'), model_dir)
@@ -221,9 +230,8 @@ def detect_logos():
 
         input_tensor = tf.convert_to_tensor(np.expand_dims(image_np, 0), dtype=tf.float32)
         detections = detect_fn(input_tensor)
-        min_score_thresh = 0.4
 
-        if tf.reduce_max(detections['detection_scores']) > min_score_thresh:
+        if tf.reduce_max(detections['detection_scores']) > MIN_DETECTION_SCORE:
             num_detections = int(detections.pop('num_detections'))
             detections = {
                 key: value[0, :num_detections].numpy()
@@ -241,21 +249,12 @@ def detect_logos():
                 category_index,
                 use_normalized_coordinates=True,
                 max_boxes_to_draw=5,
-                min_score_thresh=min_score_thresh,
+                min_score_thresh=MIN_DETECTION_SCORE,
                 agnostic_mode=False)
             return image_np_with_detections
         return None
 
-    scraper_args = {
-        'media_types': ['image'],
-        'maximum': 9999,
-        'login_user': INSTAGRAM_USERNAME,
-        'login_pass': INSTAGRAM_PASSWORD,
-    }
-
-    insta_scraper = instagram_scraper.InstagramScraper(**scraper_args)
-    insta_scraper.authenticate_with_login()
-
+    # Run each of the user's photo through the trained/restored model
     for username in usernames:
         user_dir = os.path.join(paths['PHOTOS'], username)
         try:
@@ -266,9 +265,14 @@ def detect_logos():
         shared_data = insta_scraper.get_shared_data_userinfo(username=username)
         # Generator that includes the data of each instagram post of the current user
         user_images_data_len = shared_data['edge_owner_to_timeline_media']['count']
+        # The data of each image for the current username
+        images_data = insta_scraper.query_media_gen(shared_data)
 
-        for i, item in enumerate(insta_scraper.query_media_gen(shared_data)):
+        for i, item in enumerate(images_data):
+            if i >= MAX_IMGS_PER_USER:
+                break
             print(i)
+
             photo_path = os.path.join(user_dir, f'{i}.jpg')
             try:
                 urllib.request.urlretrieve(item['display_url'], photo_path)
@@ -286,7 +290,6 @@ def detect_logos():
                 socketio.emit('receive_detection_image', {
                     'username': username,
                     'src': 'data:image/jpg;base64,' + text_photo,
-                    'logos': selected_logos,
                     # Convert seconds to milliseconds because JavaScript uses milliseconds
                     'timestamp': item['taken_at_timestamp'] * 1000,
                     'originalSrc': 'https://www.instagram.com/p/' + item['shortcode'],
@@ -295,7 +298,7 @@ def detect_logos():
 
             # Emit the progress percentage
             socketio.emit(f'send_progress_{username}', {
-                'progress': f'{(((i+1) / user_images_data_len) * 100):.2f}',
+                'progress': f'{(((i+1) / min(user_images_data_len, MAX_IMGS_PER_USER)) * 100):.2f}',
             })
         print(f'{username} done.')
     return 'good'
