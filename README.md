@@ -1,5 +1,5 @@
 # Instagram Logo Detection
-<video src='demo.mp4' width=1000></video>
+https://user-images.githubusercontent.com/23298862/168338261-8ee4946c-a2f2-43ef-8f9f-0ad874e5cd14.mp4
 
 ## About
 Instagram Logo Detection is a Flask + React web application that downloads photos from the selected Instagram usernames and tries to detect the specified logos in each photo.  
