@@ -1,8 +1,8 @@
 # Instagram Logo Detection
-![demo](demo.gif)
+.<video src='demo.mp4' width=1000/>
 
 ## About
-Instagram Logo Detection is a Flask + React web application that downloads photos from the selected Instagram usernames and tries to detect the specified logos in each photo using.  
+Instagram Logo Detection is a Flask + React web application that downloads photos from the selected Instagram usernames and tries to detect the specified logos in each photo.  
 
 The photos are downloaded with [Instagram Scraper](https://github.com/arc298/instagram-scraper)'s scraped data, inputted into a Tensorflow object detection model, and the photos with any detection will be sent to the frontend. Each photo detection is sent once the detection happens, one at a time, because the WebSocket protocol is used instead of HTTP.
 
@@ -16,7 +16,7 @@ Make sure you have Python 3 and Node installed on your machine, then:
 1. Clone this repo: `git clone https://github.com/paul2048/InstagramLogoDetection`
 2. Create the virtual environment: `python3 -m venv env`
 3. Install the server's required packages: `pip3 install requirements.txt`
-4. Install the frontend packages inside the "frontend" folder: `npm i`
+4. Install the frontend's required packages inside the "frontend" folder: `npm i`
 5. (OPTIONAL) If you have a dedicated GPU, [install CUDA and CUDNN](https://medium.com/geekculture/install-cuda-and-cudnn-on-windows-linux-52d1501a8805) if you want faster training
 
 ## Settings
@@ -53,6 +53,8 @@ extra_data
 │   └── image2.xml
 |   └── ...
 ```
+
+You can find the extra data I used for my Apple and ASUS model in "extra_data.zip".
 
 ## Run the app
 Inside the project's folder run `env\Scripts\Activate.ps1; set FLASK_APP=app.py; flask run` (Windows Powershell).  
