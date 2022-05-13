@@ -13,7 +13,6 @@ import tensorflow as tf
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_socketio import SocketIO
-from annotations.generate_tfrecord import generate_tfrecord
 from workspace_paths import paths, INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD
 from workspace_paths import BATCH_SIZE, TRAIN_STEPS, MIN_DETECTION_SCORE, MAX_IMGS_PER_USER
 from downloads_and_installs import downloads_and_installs
@@ -26,6 +25,7 @@ from downloads_and_installs import downloads_and_installs
 downloads_and_installs()
 
 import annotated_images
+from annotations.generate_tfrecord import generate_tfrecord
 from tf_object_detection.research.object_detection.model_main_tf2 import model_main_tf2
 from object_detection.builders import model_builder
 from object_detection.utils import config_util
@@ -271,7 +271,7 @@ def detect_logos():
         for i, item in enumerate(images_data):
             if i >= MAX_IMGS_PER_USER:
                 break
-            print(i)
+            print(f'Photo #{i} for {username}.')
 
             photo_path = os.path.join(user_dir, f'{i}.jpg')
             try:

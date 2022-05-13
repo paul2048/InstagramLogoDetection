@@ -5,19 +5,26 @@ import Typography from '@mui/material/Typography';
 import DetectLogosForm from '../components/DetectLogosForm';
 
 
-const style = {
+const paperStyle = {
   backgroundImage: `url(${require('../images/wave.svg').default})`,
   backgroundSize: 'cover',
   backgroundPosition: 'center',
   color: '#212121',
 };
 
+const h2Style = {
+  fontWeight: 700,
+  textShadow: '.5px .5px 2px #ccc',
+}
+
 export default function Home() {
   return (
     <Grid container spacing={4}>
       <Grid item xs={12}>
-        <Paper style={style}>
-          <Typography variant="h2" fontWeight={700}>Logo Det.</Typography>
+        <Paper style={paperStyle}>
+          <Typography variant="h2" style={h2Style}>
+            Instagram Logo Detection
+          </Typography>
         </Paper>
       </Grid>
 

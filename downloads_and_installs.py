@@ -42,7 +42,7 @@ def downloads_and_installs():
             # If the destination path is not empty
             print('annotated-images is already downloaded.')
         # Install the PIP package
-        os.system(f'pip install {paths["ANNOTATED_IMAGES"]}')
+        os.system(f'pip install {paths["ANNOTATED_IMAGES_PACKAGE"]}')
 
 
 
@@ -73,7 +73,7 @@ def downloads_and_installs():
         os.environ['PATH'] += os.pathsep + os.path.abspath(os.path.join(paths['PROTOC'], 'bin'))   
         os.system('cd tf_object_detection/research && '
                 'protoc object_detection/protos/*.proto --python_out=. && '
-                'copy object_detection/packages/tf2/setup.py setup.py && '
+                'copy object_detection\\packages\\tf2\\setup.py setup.py && '
                 'python setup.py build && '
                 'python setup.py install')
         os.system('cd tf_object_detection/research/slim && '
