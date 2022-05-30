@@ -2,7 +2,7 @@ import os
 import shutil
 import git
 import urllib.request
-from workspace_paths import paths, TFOD_DIR_NAME, PRETRAINED_MODEL_NAME
+from workspace_paths import paths, TFOD_DIR_NAME, PRETRAINED_MODEL_NAME, PRETRAINED_MODEL_URL
 
 
 def downloads_and_installs():
@@ -83,7 +83,6 @@ def downloads_and_installs():
 
     # Download the pretrained model
     if not os.path.exists(os.path.join(paths['PRETRAINED_MODEL_CKPT'])):
-        PRETRAINED_MODEL_URL = f'http://download.tensorflow.org/models/object_detection/tf2/20200711/{PRETRAINED_MODEL_NAME}.tar.gz'
         model_tar = os.path.join(paths['MODELS'], 'model.tar.gz')
         try:
             print(f'Downloading pretrained {PRETRAINED_MODEL_NAME}...')

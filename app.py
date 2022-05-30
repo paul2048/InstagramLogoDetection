@@ -208,7 +208,8 @@ def detect_logos():
 
     # Restore checkpoint
     ckpt = tf.compat.v2.train.Checkpoint(model=detection_model)
-    ckpt.restore(os.path.join(model_dir, f'ckpt-{ckpt_num}')).expect_partial()
+    checkpoint_path = os.path.join(model_dir, f'ckpt-{ckpt_num}')
+    ckpt.restore(checkpoint_path).expect_partial()
 
     @tf.function
     def detect_fn(image):

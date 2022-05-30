@@ -11,10 +11,11 @@ BATCH_SIZE = 1
 # The number of times to pass through each minibatch
 TRAIN_STEPS = 5000
 # The number of maximum images to check for each Instagram account
-MAX_IMGS_PER_USER = 1000
+MAX_IMGS_PER_USER = 100
 
 TFOD_DIR_NAME = 'tf_object_detection'
-PRETRAINED_MODEL_NAME = 'centernet_resnet50_v1_fpn_512x512_coco17_tpu-8'
+PRETRAINED_MODEL_URL = 'http://download.tensorflow.org/models/object_detection/tf2/20200711/centernet_resnet50_v2_512x512_coco17_tpu-8.tar.gz'
+PRETRAINED_MODEL_NAME = PRETRAINED_MODEL_URL.split('/')[-1].rstrip('.tar.gz') 
 
 paths = {
     'DATASET': 'dataset',
